@@ -11,13 +11,7 @@ const B = {
   waGreen: "#25D366",
 };
 
-/* ── Symbol: two C-shapes + 3 bridging dots ─────────────────────────── */
-/*
- * viewBox 100×100
- * Left  C — solid teal,  opens right,  centre (30,50)
- * Right C — blue→purple, opens left,   centre (70,50)
- * Dots  — cx 41/50/59, cy 50, r 3
- */
+/* ── Symbol: kept for in-product UI (Dashboard mock) ─────────────────── */
 function CliniqSymbol({
   size = 80,
   mono,
@@ -53,19 +47,14 @@ function CliniqSymbol({
           <stop offset="100%" stopColor={B.blue}   />
         </linearGradient>
       </defs>
-
-      {/* Left C — solid teal */}
       <path
         d="M42.62,68.02 A22,22 0 1,1 42.62,31.98 L38.03,38.53 A14,14 0 1,0 38.03,61.47Z"
         fill={B.teal}
       />
-      {/* Right C — blue → purple gradient */}
       <path
         d="M57.38,31.98 A22,22 0 1,1 57.38,68.02 L61.97,61.47 A14,14 0 1,0 61.97,38.53Z"
         fill={`url(#${id}-rc)`}
       />
-
-      {/* Bridging dots */}
       <circle cx="41" cy="50" r="3" fill={B.teal}   />
       <circle cx="50" cy="50" r="3" fill={`url(#${id}-dot-mid)`} />
       <circle cx="59" cy="50" r="3" fill={B.purple} />
@@ -73,114 +62,44 @@ function CliniqSymbol({
   );
 }
 
-/* ── Wordmark ────────────────────────────────────────────────────────── */
-/*
- * "Cl" + ı(green dot) + "n" + ı(green dot) + "q" in navy/white
- * "Cura" in WA green
- * Tagline: "Care." teal · "Connected." blue→purple gradient
- */
-function Wordmark({
-  mainPx = 28,
-  tagPx  = 11,
-  dark   = false,
-  mono,
-  showTag = true,
-}: {
-  mainPx?:  number;
-  tagPx?:   number;
-  dark?:    boolean;
-  mono?:    "white" | "black" | "navy";
-  showTag?: boolean;
-}) {
-  const base       = dark ? "#FFFFFF" : B.navy;
-  const textColor  = mono ? (mono === "white" ? "#FFFFFF" : mono === "black" ? "#111111" : B.navy) : base;
-  const curaColor  = (mono || dark) ? textColor : B.waGreen;
-
-  const font = "'Plus Jakarta Sans', 'Bricolage Grotesque', system-ui, sans-serif";
-
-  /* Dotless-ı + positioned green dot — skipped in mono/dark mode */
-  function GreenI() {
-    if (mono || dark) return <span style={{ color: textColor }}>i</span>;
-    return (
-      <span style={{ position: "relative", display: "inline-block" }}>
-        <span style={{ color: textColor }}>&#x0131;</span>
-        <span style={{
-          position: "absolute",
-          left: "50%",
-          top: "0.06em",
-          transform: "translateX(-50%)",
-          width: "0.14em",
-          height: "0.14em",
-          borderRadius: "50%",
-          background: B.waGreen,
-          display: "block",
-        }} />
-      </span>
-    );
-  }
-
-  return (
-    <div style={{ fontFamily: font }}>
-      {/* Wordmark */}
-      <div style={{
-        fontSize: mainPx,
-        fontWeight: 700,
-        lineHeight: 1,
-        letterSpacing: "0.01em",
-        whiteSpace: "nowrap",
-      }}>
-        <span style={{ color: textColor }}>Parro </span>
-        <span style={{ color: (mono || dark) ? textColor : B.teal }}>Connect</span>
-      </div>
-
-      {/* Tagline */}
-      {showTag && (
-        <div style={{
-          fontSize: tagPx,
-          fontWeight: 500,
-          letterSpacing: "0.06em",
-          marginTop: Math.round(mainPx * 0.25),
-          whiteSpace: "nowrap",
-        }}>
-          {(mono || dark) ? (
-            <span style={{ color: textColor }}>Engage · Retain · Grow</span>
-          ) : (
-            <>
-              <span style={{ color: B.teal }}>Engage</span>
-              <span style={{ color: B.navy, opacity: 0.4 }}> · </span>
-              <span style={{ color: B.blue }}>Retain</span>
-              <span style={{ color: B.navy, opacity: 0.4 }}> · </span>
-              <span style={{ color: B.purple }}>Grow</span>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Public Logo component ───────────────────────────────────────────── */
 
 export interface LogoProps {
-  /** Size bucket — controls icon + text scaling */
+  /** Size bucket — controls logo height */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
-  /** Show on dark backgrounds (flips text to white) */
+  /** Show on dark backgrounds (white wordmark) */
   dark?: boolean;
-  /** Monochrome override */
+  /** Monochrome override — white uses the dark-bg asset */
   mono?: "white" | "black" | "navy";
-  /** Hide tagline ("Care. Connected.") */
+  /** Hide tagline ("engage · retain · grow") */
   noTag?: boolean;
   /** Only the symbol, no wordmark */
   iconOnly?: boolean;
 }
 
-const SIZES: Record<NonNullable<LogoProps["size"]>, { icon: number; main: number; tag: number }> = {
-  xs: { icon: 22, main: 13, tag:  9 },
-  sm: { icon: 30, main: 17, tag: 10 },
-  md: { icon: 44, main: 24, tag: 11 },
-  lg: { icon: 60, main: 32, tag: 13 },
-  xl: { icon: 88, main: 48, tag: 16 },
+const HEIGHTS: Record<NonNullable<LogoProps["size"]>, number> = {
+  xs: 28,
+  sm: 40,
+  md: 56,
+  lg: 72,
+  xl: 96,
 };
+
+function logoSrc({
+  dark,
+  mono,
+  noTag,
+}: {
+  dark?: boolean;
+  mono?: LogoProps["mono"];
+  noTag?: boolean;
+}) {
+  const useWhite = Boolean(dark || mono === "white");
+  if (noTag) {
+    return useWhite ? "/parro-logo-notag-white.png" : "/parro-logo-notag.png";
+  }
+  return useWhite ? "/parro-logo-white.png" : "/parro-logo.png";
+}
 
 export default function Logo({
   size    = "md",
@@ -189,25 +108,30 @@ export default function Logo({
   noTag   = false,
   iconOnly = false,
 }: LogoProps) {
-  const { icon, main, tag } = SIZES[size];
-  /* Offset so symbol centre aligns with wordmark cap-height */
-  const wordmarkPadTop = Math.max(0, Math.round((icon - main) / 2));
+  const height = HEIGHTS[size];
+
+  if (iconOnly) {
+    return <CliniqSymbol size={height} mono={mono ?? (dark ? "white" : undefined)} />;
+  }
+
+  const src = logoSrc({ dark, mono, noTag });
+  // Intrinsic aspect: full ~909×294, no-tag ~909×240
+  const aspect = noTag ? 909 / 240 : 909 / 294;
+  const width = Math.round(height * aspect);
 
   return (
-    <div style={{ display: "inline-flex", alignItems: "flex-start", gap: Math.round(icon * 0.14) }}>
-      <CliniqSymbol size={icon} mono={mono} />
-      {!iconOnly && (
-        <div style={{ paddingTop: wordmarkPadTop }}>
-          <Wordmark
-            mainPx={main}
-            tagPx={tag}
-            dark={dark}
-            mono={mono}
-            showTag={!noTag}
-          />
-        </div>
-      )}
-    </div>
+    <img
+      src={src}
+      alt="parro connect logo - engage, retain, grow"
+      width={width}
+      height={height}
+      style={{
+        height,
+        width: "auto",
+        display: "block",
+        objectFit: "contain",
+      }}
+    />
   );
 }
 
