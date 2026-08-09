@@ -484,7 +484,7 @@ const TAB_DATA = [
   },
   {
     title: "Automated followup, human touch",
-    body: "Day after prescription ends, CliniqCura checks on the patient automatically. One tap reply. You only see the ones who need attention.",
+    body: "Day after prescription ends, ParroConnect checks on the patient automatically. One tap reply. You only see the ones who need attention.",
     bullets: [
       "Auto-sent on prescription end date",
       "WhatsApp interactive buttons",

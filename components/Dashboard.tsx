@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CliniqSymbol } from "./Logo";
 
 const APPTS = [
   { token: "M1", name: "Aarav Sharma",  time: "10:00 AM", type: "In Clinic", status: "seen"    },
@@ -40,13 +39,8 @@ function DashboardUI() {
         style={{ background: "#0F0F1F", borderRight: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div className="flex items-center gap-1.5 mb-3 px-1">
-          <CliniqSymbol size={22} mono="white" />
-          <div>
-            <p className="font-semibold text-[11px] leading-none" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span style={{ color: "white" }}>Cliniq</span><span style={{ color: "#25D366" }}>Cura</span>
-            </p>
-            <p className="text-gray-500 text-[9px]">Care. Connected.</p>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/parro-logo-notag-white.png" alt="" width={110} height={29} style={{ height: 28, width: "auto" }} />
         </div>
         <div className="rounded-lg p-2 mb-2" style={{ background: "rgba(255,255,255,0.05)" }}>
           <p className="text-white font-medium text-[10px]">TrueCare Family Clinic</p>

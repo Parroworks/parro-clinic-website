@@ -1,6 +1,6 @@
 import { LegalPage, Section, BulletList, Highlight } from "../LegalPage";
 
-export const metadata = { title: "Cookie Policy — CliniqCura" };
+export const metadata = { title: "Cookie Policy — ParroConnect" };
 
 export default function CookiePolicy() {
   return (
@@ -77,8 +77,8 @@ export default function CookiePolicy() {
 
       <Section number="6" title="Contact">
         <p>For any questions about cookies or tracking:</p>
-        <p><strong>Email:</strong> support.cliniqcura@gmail.com</p>
-        <p><strong>DPO:</strong> support.cliniqcura@gmail.com</p>
+        <p><strong>Email:</strong> support@parroconnect.com</p>
+        <p><strong>DPO:</strong> support@parroconnect.com</p>
       </Section>
     </LegalPage>
   );

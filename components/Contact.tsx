@@ -60,13 +60,13 @@ export default function Contact() {
               <span style={{ color: "var(--teal)" }}>on WhatsApp.</span>
             </h2>
             <p className="text-lg mb-8 leading-relaxed" style={{ color: "var(--slate)" }}>
-              Have questions about CliniqCura? Want a personalised demo? Fill the form and we&apos;ll get back to you within 24 hours.
+              Have questions about ParroConnect? Want a personalised demo? Fill the form and we&apos;ll get back to you within 24 hours.
             </p>
 
             <div className="space-y-4">
               {[
                 { icon: "💬", title: "Chat on WhatsApp", sub: "Fastest way to reach us", href: "https://wa.me/918438055569" },
-                { icon: "📧", title: "Email us", sub: "support.cliniqcura@gmail.com", href: "mailto:support.cliniqcura@gmail.com" },
+                { icon: "📧", title: "Email us", sub: "support@parroconnect.com", href: "mailto:support@parroconnect.com" },
                 { icon: "📍", title: "Based in", sub: "Chennai, Tamil Nadu, India", href: null },
               ].map((item) => (
                 <div key={item.title} className="flex items-center gap-4">

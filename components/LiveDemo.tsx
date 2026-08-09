@@ -34,7 +34,7 @@ export default function LiveDemo() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent("https://wa.me/918438055569?text=Hi")}&color=1D9E75&bgcolor=FFFFFF`}
-                alt="QR code to open CliniqCura on WhatsApp"
+                alt="QR code to open ParroConnect on WhatsApp"
                 width={160}
                 height={160}
                 className="rounded-xl"
@@ -67,7 +67,7 @@ export default function LiveDemo() {
 
           {/* Steps */}
           <div className="flex items-center justify-center gap-4 mt-10">
-            {["Scan or tap", 'Send "Hi"', "Experience CliniqCura live"].map((step, i) => (
+            {["Scan or tap", 'Send "Hi"', "Experience ParroConnect live"].map((step, i) => (
               <div key={step} className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <div

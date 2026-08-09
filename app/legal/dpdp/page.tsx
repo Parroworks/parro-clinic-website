@@ -1,6 +1,6 @@
 import { LegalPage, Section, BulletList, Highlight, WarningBox } from "../LegalPage";
 
-export const metadata = { title: "DPDP Compliance Policy — CliniqCura" };
+export const metadata = { title: "DPDP Compliance Policy — ParroConnect" };
 
 export default function DPDPPolicy() {
   return (
@@ -46,7 +46,7 @@ export default function DPDPPolicy() {
           "Right to Nominate — patients may nominate a representative to exercise their rights on their behalf",
         ]} />
         <p className="mt-2">
-          To exercise any of these rights, patients or clinic administrators may contact: <strong>support.cliniqcura@gmail.com</strong>
+          To exercise any of these rights, patients or clinic administrators may contact: <strong>support@parroconnect.com</strong>
         </p>
       </Section>
 
@@ -60,7 +60,7 @@ export default function DPDPPolicy() {
           "Unresolved complaints may be escalated to the Data Protection Board of India (DPBI)",
         ]} />
         <p className="mt-2">
-          DPO Contact: <strong>support.cliniqcura@gmail.com</strong>
+          DPO Contact: <strong>support@parroconnect.com</strong>
         </p>
       </Section>
 
@@ -123,8 +123,8 @@ export default function DPDPPolicy() {
       </Section>
 
       <Section number="8" title="Contact the Data Protection Officer">
-        <p><strong>DPO:</strong> Data Protection Officer, CliniqCura Health Tech Pvt. Ltd.</p>
-        <p><strong>Email:</strong> support.cliniqcura@gmail.com</p>
+        <p><strong>DPO:</strong> Data Protection Officer, ParroConnect</p>
+        <p><strong>Email:</strong> support@parroconnect.com</p>
         <p><strong>Address:</strong> Chennai, Tamil Nadu, India — 600 001</p>
         <p><strong>Response SLA:</strong> 48 hours acknowledgement · 30 days resolution</p>
       </Section>

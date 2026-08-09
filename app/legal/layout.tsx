@@ -46,7 +46,7 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
       </main>
 
       <footer className="border-t mt-16 py-8 text-center text-sm" style={{ borderColor: "#E2E8F0", color: "#94A3B8" }}>
-        © {new Date().getFullYear()} CliniqCura. All rights reserved.
+        © {new Date().getFullYear()} ParroConnect. All rights reserved.
       </footer>
     </div>
   );
