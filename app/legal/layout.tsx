@@ -16,8 +16,8 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-4 text-sm">
             {[
-              { label: "Privacy", href: "/legal/privacy" },
-              { label: "Terms", href: "/legal/terms" },
+              { label: "Privacy Policy", href: "/legal/privacy" },
+              { label: "Terms and Conditions", href: "/legal/terms" },
               { label: "DPDP Policy", href: "/legal/dpdp" },
               { label: "Cookie Policy", href: "/legal/cookies" },
             ].map((l) => (
