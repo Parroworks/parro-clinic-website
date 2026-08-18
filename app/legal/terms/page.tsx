@@ -5,7 +5,7 @@ export const metadata = { title: "Terms of Service — ParroConnect" };
 export default function Terms() {
   return (
     <LegalPage
-      title="Terms of Service"
+      title="Terms and Conditions"
       subtitle="The rules and conditions governing use of the PRA platform."
       lastUpdated="18 June 2026"
     >
