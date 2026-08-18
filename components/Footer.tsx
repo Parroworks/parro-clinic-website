@@ -53,8 +53,8 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4 text-sm">Legal</h4>
             <ul className="space-y-2.5">
               {[
-                { label: "Privacy",      href: "/legal/privacy" },
-                { label: "Terms",        href: "/legal/terms" },
+                { label: "Privacy Policy",      href: "/legal/privacy" },
+                { label: "Terms and Conditions",        href: "/legal/terms" },
                 { label: "DPDP Policy",  href: "/legal/dpdp" },
                 { label: "Cookie Policy",href: "/legal/cookies" },
               ].map((l) => (
