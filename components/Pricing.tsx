@@ -202,24 +202,26 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => setModal({ open: true, type: plan.name === "Pro" ? "demo" : "trial" })}
-                  className="block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
-                  style={
-                    plan.highlight
-                      ? { background: "var(--teal)", color: "white" }
-                      : { border: "1px solid var(--border)", color: "var(--navy)", background: "transparent" }
-                  }
-                >
-                  {plan.cta}
-                </button>
+                {(() => {
+                  const cls = "block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90";
+                  const style = plan.highlight
+                    ? { background: "var(--teal)", color: "white" }
+                    : { border: "1px solid var(--border)", color: "var(--navy)", background: "transparent" };
+                  return plan.name === "Pro" ? (
+                    <button onClick={() => setModal({ open: true, type: "demo" })} className={cls} style={style}>
+                      {plan.cta}
+                    </button>
+                  ) : (
+                    <a href="/get-started" className={cls} style={style}>{plan.cta}</a>
+                  );
+                })()}
               </div>
             </motion.div>
           ))}
         </div>
 
         <p className="text-center mt-8 text-sm" style={{ color: "var(--slate)" }}>
-          All plans include a 14-day free trial. No credit card required.
+          All plans include a 30-day free trial. No credit card required.
         </p>
       </div>
 

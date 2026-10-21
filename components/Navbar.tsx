@@ -67,13 +67,13 @@ export default function Navbar() {
             >
               Book a demo
             </button>
-            <button
-              onClick={() => openModal("trial")}
+            <a
+              href="/get-started"
               className="px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all hover:opacity-90"
               style={{ background: "var(--teal)" }}
             >
               Start free trial →
-            </button>
+            </a>
           </div>
 
           {/* Mobile hamburger */}
@@ -122,13 +122,13 @@ export default function Navbar() {
                 >
                   Book a demo
                 </button>
-                <button
-                  onClick={() => openModal("trial")}
+                <a
+                  href="/get-started"
                   className="py-3 text-center rounded-xl text-white font-semibold"
                   style={{ background: "var(--teal)" }}
                 >
                   Start free trial →
-                </button>
+                </a>
               </div>
             </div>
           </motion.div>

@@ -22,7 +22,7 @@ export default function ContactModal({ open, formType, onClose }: Props) {
   const title   = formType === "demo" ? "Book a Demo" : "Start Free Trial";
   const subtitle = formType === "demo"
     ? "Schedule a personalised walkthrough for your clinic."
-    : "Get 14 days free — no credit card required.";
+    : "Get 30 days free — no credit card required.";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
