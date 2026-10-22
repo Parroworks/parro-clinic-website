@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import Logo from "@/components/Logo";
+import { ClinicIllustration, ConnectIllustration, DoneIllustration } from "./illustrations";
 
 declare global {
   interface Window {
@@ -86,6 +87,53 @@ function Stepper({ step }: { step: Step }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+const PANEL: Record<Step, { title: string; text: string; Art: () => React.JSX.Element }> = {
+  details: {
+    title: "Run your clinic on WhatsApp",
+    text: "Appointments, reminders and follow-ups handled automatically — right where your patients already chat.",
+    Art: ClinicIllustration,
+  },
+  connect: {
+    title: "Connect your clinic's number",
+    text: "Patients keep messaging the number they already know. We plug in the assistant behind it.",
+    Art: ConnectIllustration,
+  },
+  done: {
+    title: "You're almost live",
+    text: "We're setting things up for you. You'll hear from us as soon as your clinic is ready.",
+    Art: DoneIllustration,
+  },
+};
+
+const BENEFITS = [
+  "30-day free trial, no card needed",
+  "Ready in about 3 minutes",
+  "Patients can chat in their own language",
+];
+
+function VisualPanel({ step }: { step: Step }) {
+  const { title, text, Art } = PANEL[step];
+  return (
+    <aside className="lg:rounded-3xl lg:border lg:border-white/60 lg:bg-white/40 lg:p-10 lg:shadow-sm lg:backdrop-blur-sm">
+      <div className="mx-auto w-full max-w-[15rem] sm:max-w-xs lg:max-w-md">
+        <Art />
+      </div>
+      <div className="mt-2 hidden lg:block">
+        <h2 className="font-display text-2xl font-bold leading-tight text-[var(--navy)]">{title}</h2>
+        <p className="mt-2 text-[15px] leading-relaxed text-[var(--slate)]">{text}</p>
+        <ul className="mt-6 space-y-2.5">
+          {BENEFITS.map((b) => (
+            <li key={b} className="flex items-center gap-2.5 text-sm text-[var(--navy)]">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--teal)]" aria-hidden />
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </aside>
   );
 }
 
@@ -240,12 +288,15 @@ export default function GetStarted() {
     <>
       <Script src="https://connect.facebook.net/en_US/sdk.js" strategy="afterInteractive" crossOrigin="anonymous" />
 
-      <div className="mx-auto w-full max-w-xl">
-        <a href="/" className="mb-6 inline-block" aria-label="ParroConnect home">
+      <div className="mx-auto w-full max-w-6xl">
+        <a href="/" className="mb-4 inline-block lg:mb-8" aria-label="ParroConnect home">
           <Logo size="sm" noTag />
         </a>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
+        <div className="grid items-center gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+        <VisualPanel step={step} />
+
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8 lg:max-w-none">
           <Stepper step={step} />
 
           {step === "details" && (
@@ -355,6 +406,7 @@ export default function GetStarted() {
               </a>
             </div>
           )}
+        </div>
         </div>
       </div>
     </>
