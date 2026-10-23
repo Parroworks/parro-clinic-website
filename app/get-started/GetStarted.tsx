@@ -212,7 +212,14 @@ export default function GetStarted() {
     try {
       const { signup_id } = await api<{ signup_id: string }>("/api/v1/onboarding/start", {
         method: "POST",
-        body: JSON.stringify({ ...form, language: form.language.toLowerCase() }),
+        body: JSON.stringify({
+          owner_name: form.doctor_name,
+          business_name: form.clinic_name,
+          email: form.email,
+          mobile: form.mobile,
+          city: form.city,
+          language: form.language.toLowerCase(),
+        }),
       });
       setSignupId(signup_id);
       store(STORAGE_KEY, signup_id);

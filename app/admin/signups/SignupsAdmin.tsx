@@ -4,8 +4,8 @@ import { useState } from "react";
 
 type Signup = {
   id: string;
-  doctor_name: string;
-  clinic_name: string;
+  owner_name: string;
+  business_name: string;
   email: string;
   mobile: string;
   city?: string;
@@ -19,10 +19,10 @@ type Signup = {
 type Login = { username: string; pin: string; note: string };
 
 type ClinicBilling = {
-  doctor_id: string;
-  clinic_name: string;
-  doctor_name: string;
-  mobile: string;
+  tenant_id: string;
+  name: string;
+  owner_name: string;
+  owner_mobile: string;
   status: string;
   paused: boolean;
   days_left: number | null;
@@ -67,16 +67,16 @@ export default function SignupsAdmin() {
   const loadBilling = async () => {
     try {
       const data = await call("/api/v1/admin/billing");
-      setBilling(data.clinics);
+      setBilling(data.tenants);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load billing");
     }
   };
 
   const adjust = async (c: ClinicBilling, body: object) => {
-    setBusyId(c.doctor_id);
+    setBusyId(c.tenant_id);
     try {
-      await call(`/api/v1/admin/billing/${c.doctor_id}`, { method: "POST", body: JSON.stringify(body) });
+      await call(`/api/v1/admin/billing/${c.tenant_id}`, { method: "POST", body: JSON.stringify(body) });
       await loadBilling();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed");
@@ -86,7 +86,7 @@ export default function SignupsAdmin() {
   };
 
   const markPaid = (c: ClinicBilling) => {
-    const days = Number(window.prompt(`Mark ${c.clinic_name} paid for how many days from today?`, "30"));
+    const days = Number(window.prompt(`Mark ${c.name} paid for how many days from today?`, "30"));
     if (!days || days < 1) return;
     void adjust(c, { paid_until: new Date(Date.now() + days * 86_400_000).toISOString() });
   };
@@ -96,13 +96,13 @@ export default function SignupsAdmin() {
     if (action === "reject") {
       const reason = window.prompt("Reason for rejection (optional)") ?? undefined;
       body = JSON.stringify({ reason });
-    } else if (!window.confirm(`Approve ${s.clinic_name} and start their free trial?`)) {
+    } else if (!window.confirm(`Approve ${s.business_name} and start their free trial?`)) {
       return;
     }
     setBusyId(s.id);
     try {
       const data = await call(`/api/v1/admin/signups/${s.id}/${action}`, { method: "POST", body: body ?? "{}" });
-      if (action === "approve") setLogin({ clinic: s.clinic_name, login: data.login });
+      if (action === "approve") setLogin({ clinic: s.business_name, login: data.login });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed");
@@ -145,7 +145,7 @@ export default function SignupsAdmin() {
           <div key={s.id} className="rounded-xl border border-[var(--border)] bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-[var(--navy)]">{s.clinic_name} <span className="font-normal text-[var(--slate)]">— {s.doctor_name}</span></p>
+                <p className="font-semibold text-[var(--navy)]">{s.business_name} <span className="font-normal text-[var(--slate)]">— {s.owner_name}</span></p>
                 <p className="text-sm text-[var(--slate)]">{s.email} · {s.mobile}{s.city ? ` · ${s.city}` : ""}</p>
                 <p className="mt-1 text-sm text-[var(--slate)]">
                   WhatsApp: {s.display_phone_number ?? "not connected"}{s.phone_status ? ` (${s.phone_status})` : ""}
@@ -173,9 +173,9 @@ export default function SignupsAdmin() {
           <div className="mt-4 space-y-3">
             {billing.length === 0 && <p className="text-sm text-[var(--slate)]">No clinics on a trial or plan yet.</p>}
             {billing.map((c) => (
-              <div key={c.doctor_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white p-4">
+              <div key={c.tenant_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white p-4">
                 <div>
-                  <p className="font-semibold text-[var(--navy)]">{c.clinic_name} <span className="font-normal text-[var(--slate)]">— {c.doctor_name}</span></p>
+                  <p className="font-semibold text-[var(--navy)]">{c.name} <span className="font-normal text-[var(--slate)]">— {c.owner_name}</span></p>
                   <p className="text-sm text-[var(--slate)]">
                     <span className={c.paused ? "font-semibold text-[var(--coral)]" : "font-semibold text-[var(--teal-dark)]"}>
                       {c.paused ? "Paused" : c.status}
@@ -186,9 +186,9 @@ export default function SignupsAdmin() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button disabled={busyId === c.doctor_id} onClick={() => adjust(c, { extend_days: 7 })}
+                  <button disabled={busyId === c.tenant_id} onClick={() => adjust(c, { extend_days: 7 })}
                     className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">+7 days trial</button>
-                  <button disabled={busyId === c.doctor_id} onClick={() => markPaid(c)}
+                  <button disabled={busyId === c.tenant_id} onClick={() => markPaid(c)}
                     className="rounded-lg bg-[var(--teal)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Mark paid</button>
                 </div>
               </div>
