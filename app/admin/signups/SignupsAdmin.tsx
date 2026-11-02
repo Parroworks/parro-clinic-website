@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Signup = {
   id: string;
@@ -32,10 +32,16 @@ type ClinicBilling = {
 };
 
 const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+const TOKEN_KEY = "parro_admin_token";
 const FILTERS = ["pending_approval", "details_submitted", "approved", "rejected"];
 
 export default function SignupsAdmin() {
-  const [key, setKey] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [adminName, setAdminName] = useState("");
+  const [needsChange, setNeedsChange] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [filter, setFilter] = useState("pending_approval");
   const [rows, setRows] = useState<Signup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,15 +49,79 @@ export default function SignupsAdmin() {
   const [login, setLogin] = useState<{ clinic: string; login: Login } | null>(null);
   const [billing, setBilling] = useState<ClinicBilling[] | null>(null);
 
-  const call = async (path: string, init?: RequestInit) => {
+  const signOut = () => {
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* storage unavailable */ }
+    setToken(null);
+    setRows(null);
+    setBilling(null);
+    setNeedsChange(false);
+  };
+
+  const call = async (path: string, init?: RequestInit, withToken: string | null = token) => {
     const res = await fetch(`${API}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", "X-Admin-Key": key },
+      headers: { "Content-Type": "application/json", ...(withToken ? { Authorization: `Bearer ${withToken}` } : {}) },
     });
     const data = await res.json().catch(() => ({}));
+    if (res.status === 403 && data.detail === "password_change_required") {
+      setNeedsChange(true);
+      throw new Error("Set a new password to continue");
+    }
+    if (res.status === 401 && withToken) {
+      signOut();
+      throw new Error("Your session ended. Sign in again.");
+    }
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Request failed");
     return data;
   };
+
+  const start = (t: string, name: string, mustChange: boolean) => {
+    try { sessionStorage.setItem(TOKEN_KEY, t); } catch { /* storage unavailable */ }
+    setToken(t);
+    setAdminName(name);
+    setNeedsChange(mustChange);
+    setError(null);
+  };
+
+  const signIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const data = await call("/api/v1/admin/login", { method: "POST", body: JSON.stringify({ email, password }) }, null);
+      setPassword("");
+      start(data.token, data.admin.name, data.admin.must_change_password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed");
+    }
+  };
+
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      await call("/api/v1/admin/change-password", { method: "POST", body: JSON.stringify({ current_password: password, new_password: newPassword }) });
+      setPassword("");
+      setNewPassword("");
+      setNeedsChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not change password");
+    }
+  };
+
+  useEffect(() => {
+    let saved: string | null = null;
+    try { saved = sessionStorage.getItem(TOKEN_KEY); } catch { /* storage unavailable */ }
+    if (!saved) return;
+    call("/api/v1/admin/me", undefined, saved)
+      .then((d) => start(saved as string, d.admin.name, d.admin.must_change_password))
+      .catch(() => signOut());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (token && !needsChange) { void load(); void loadBilling(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, needsChange]);
 
   const load = async (f = filter) => {
     setError(null);
@@ -115,18 +185,42 @@ export default function SignupsAdmin() {
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-2xl font-bold text-[var(--navy)]">Clinic signups</h1>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Admin key"
-          className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
-        <button onClick={() => { void load(); void loadBilling(); }} disabled={!key}
-          className="rounded-lg bg-[var(--teal)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Load</button>
-        {FILTERS.map((f) => (
-          <button key={f} onClick={() => { setFilter(f); if (key) void load(f); }}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${f === filter ? "bg-[var(--navy)] text-white" : "bg-white text-[var(--slate)] border border-[var(--border)]"}`}>
-            {f.replace("_", " ")}
-          </button>
-        ))}
-      </div>
+      {!token && (
+        <form onSubmit={signIn} className="mt-4 flex max-w-sm flex-col gap-3">
+          <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email"
+            className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
+            className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
+          <button type="submit" className="rounded-lg bg-[var(--teal)] px-4 py-2 text-sm font-semibold text-white">Sign in</button>
+        </form>
+      )}
+
+      {token && needsChange && (
+        <form onSubmit={changePassword} className="mt-4 flex max-w-sm flex-col gap-3">
+          <p className="text-sm text-[var(--slate)]">Choose your own password (at least 10 characters) before continuing.</p>
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Temporary password"
+            className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
+          <input type="password" required minLength={10} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password"
+            className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
+          <div className="flex gap-2">
+            <button type="submit" className="rounded-lg bg-[var(--teal)] px-4 py-2 text-sm font-semibold text-white">Save password</button>
+            <button type="button" onClick={signOut} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm">Sign out</button>
+          </div>
+        </form>
+      )}
+
+      {token && !needsChange && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-[var(--slate)]">Signed in as {adminName}</span>
+          <button onClick={signOut} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs">Sign out</button>
+          {FILTERS.map((f) => (
+            <button key={f} onClick={() => { setFilter(f); void load(f); }}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium ${f === filter ? "bg-[var(--navy)] text-white" : "bg-white text-[var(--slate)] border border-[var(--border)]"}`}>
+              {f.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-[var(--coral)]">{error}</p>}
 
