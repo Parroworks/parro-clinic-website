@@ -14,6 +14,8 @@ type Signup = {
   phone_status?: string;
   registration_note?: string;
   created_at: string;
+  messaging_ready?: boolean;
+  provisioning?: { templates?: Record<string, string>; error?: string | null };
 };
 
 type Login = { username: string; pin: string; note: string };
@@ -155,6 +157,19 @@ export default function SignupsAdmin() {
     }
   };
 
+  const refreshTemplates = async (s: Signup) => {
+    setBusyId(s.id);
+    setError(null);
+    try {
+      const data = await call(`/api/v1/admin/signups/${s.id}/templates/refresh`, { method: "POST", body: "{}" });
+      setRows((cur) => cur && cur.map((r) => (r.id === s.id ? { ...r, provisioning: { ...r.provisioning, templates: data.templates } } : r)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not refresh templates");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const markPaid = (c: ClinicBilling) => {
     const days = Number(window.prompt(`Mark ${c.name} paid for how many days from today?`, "30"));
     if (!days || days < 1) return;
@@ -247,8 +262,29 @@ export default function SignupsAdmin() {
                   WhatsApp: {s.display_phone_number ?? "not connected"}{s.phone_status ? ` (${s.phone_status})` : ""}
                 </p>
                 {s.registration_note && <p className="mt-1 text-xs text-[var(--amber)]">{s.registration_note}</p>}
+                {s.status === "approved" && (
+                  <p className="mt-1 text-sm text-[var(--slate)]">
+                    Templates:{" "}
+                    {s.provisioning?.templates && Object.keys(s.provisioning.templates).length ? (
+                      Object.entries(s.provisioning.templates).map(([name, status]) => (
+                        <span key={name} title={`${name}: ${status}`}
+                          className={`mr-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                            status === "APPROVED" ? "bg-[var(--teal-light)] text-[var(--teal-dark)]"
+                            : status === "PENDING" || status === "IN_APPEAL" ? "bg-amber-50 text-[var(--amber)]"
+                            : "bg-red-50 text-[var(--coral)]"}`}>
+                          {name.replace(/^parro_/, "")}: {status.startsWith("ERROR") ? "ERROR" : status}
+                        </span>
+                      ))
+                    ) : "not checked yet"}
+                    {s.provisioning?.error && <span className="block text-xs text-[var(--coral)]">Setup error: {s.provisioning.error}</span>}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-[var(--slate)]">{new Date(s.created_at).toLocaleString()}</p>
               </div>
+              {s.status === "approved" && (
+                <button disabled={busyId === s.id} onClick={() => refreshTemplates(s)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh templates</button>
+              )}
               {s.status === "pending_approval" && (
                 <div className="flex gap-2">
                   <button disabled={busyId === s.id} onClick={() => act(s, "approve")}
