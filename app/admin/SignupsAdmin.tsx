@@ -182,24 +182,24 @@ export default function SignupsAdmin() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="font-display text-2xl font-bold text-[var(--navy)]">
+    <div className={token && !needsChange ? "mx-auto max-w-5xl" : "mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center"}>
+      <h1 className={`font-display text-2xl font-bold text-[var(--navy)] ${token && !needsChange ? "" : "text-center"}`}>
         {!token ? "Admin login" : needsChange ? "Set your password" : "Clinic signups"}
       </h1>
 
       {!token && (
-        <form onSubmit={signIn} className="mt-4 flex max-w-sm flex-col gap-3">
+        <form onSubmit={signIn} className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm">
           <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email"
             className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
           <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
             className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
-          <button type="submit" className="rounded-lg bg-[var(--teal)] px-4 py-2 text-sm font-semibold text-white">Sign in</button>
+          <button type="submit" className="rounded-lg bg-[var(--teal)] px-4 py-2.5 text-sm font-semibold text-white">Sign in</button>
         </form>
       )}
 
       {token && needsChange && (
-        <form onSubmit={changePassword} className="mt-4 flex max-w-sm flex-col gap-3">
-          <p className="text-sm text-[var(--slate)]">Choose your own password (at least 10 characters) before continuing.</p>
+        <form onSubmit={changePassword} className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm">
+          <p className="text-center text-sm text-[var(--slate)]">Choose your own password (at least 10 characters) before continuing.</p>
           <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Temporary password"
             className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm" />
           <input type="password" required minLength={10} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password"
@@ -224,7 +224,7 @@ export default function SignupsAdmin() {
         </div>
       )}
 
-      {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-[var(--coral)]">{error}</p>}
+      {error && <p role="alert" className={`mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-[var(--coral)] ${token && !needsChange ? "" : "text-center"}`}>{error}</p>}
 
       {login && (
         <div className="mt-4 rounded-xl border border-[var(--teal)]/40 bg-[var(--teal-light)] p-4 text-sm">

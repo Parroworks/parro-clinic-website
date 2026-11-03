@@ -1,15 +1,5 @@
-import type { Metadata } from "next";
-import SignupsAdmin from "./SignupsAdmin";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Admin — ParroConnect",
-  robots: { index: false, follow: false },
-};
-
-export default function SignupsAdminPage() {
-  return (
-    <main className="min-h-screen bg-[var(--mist)] px-4 py-10">
-      <SignupsAdmin />
-    </main>
-  );
+export default function AdminRedirect() {
+  redirect("/admin");
 }
