@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SignupsAdmin from "./SignupsAdmin";
 
 export const metadata: Metadata = {
-  title: "Signups — ParroConnect admin",
+  title: "Admin — ParroConnect",
   robots: { index: false, follow: false },
 };
 

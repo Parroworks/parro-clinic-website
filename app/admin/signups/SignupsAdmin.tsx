@@ -183,7 +183,9 @@ export default function SignupsAdmin() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="font-display text-2xl font-bold text-[var(--navy)]">Clinic signups</h1>
+      <h1 className="font-display text-2xl font-bold text-[var(--navy)]">
+        {!token ? "Admin login" : needsChange ? "Set your password" : "Clinic signups"}
+      </h1>
 
       {!token && (
         <form onSubmit={signIn} className="mt-4 flex max-w-sm flex-col gap-3">
