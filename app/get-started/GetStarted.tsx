@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import Logo from "@/components/Logo";
+import { VERTICALS, VERTICAL_KEYS, isVertical, type Vertical, type VerticalKey } from "@/lib/verticals";
 import { ClinicIllustration, ConnectIllustration, DoneIllustration } from "./illustrations";
 
 declare global {
@@ -24,7 +25,6 @@ const APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
 const CONFIG_ID = process.env.NEXT_PUBLIC_META_CONFIG_ID ?? "";
 const SOLUTION_ID = process.env.NEXT_PUBLIC_META_SOLUTION_ID ?? "";
 const GRAPH_VERSION = process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v20.0";
-const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const STORAGE_KEY = "parro_signup_id";
 
 const LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Kannada", "Malayalam"];
@@ -42,8 +42,8 @@ function store(key: string, value?: string) {
   return null;
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+async function api<T>(base: string, path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${base}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
@@ -57,9 +57,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-function Stepper({ step }: { step: Step }) {
+function Stepper({ step, v }: { step: Step; v: Vertical }) {
   const items: { id: Step; label: string }[] = [
-    { id: "details", label: "Clinic details" },
+    { id: "details", label: `${v.label} details` },
     { id: "connect", label: "Connect WhatsApp" },
     { id: "done", label: "Done" },
   ];
@@ -90,32 +90,29 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
-const PANEL: Record<Step, { title: string; text: string; Art: () => React.JSX.Element }> = {
-  details: {
-    title: "Run your clinic on WhatsApp",
-    text: "Appointments, reminders and follow-ups handled automatically — right where your patients already chat.",
-    Art: ClinicIllustration,
-  },
+const panel = (step: Step, v: Vertical): { title: string; text: string; Art: () => React.JSX.Element } => ({
+  details: { ...v.panel, Art: ClinicIllustration },
   connect: {
-    title: "Connect your clinic's number",
-    text: "Patients keep messaging the number they already know. We plug in the assistant behind it.",
+    title: `Connect your ${v.noun}'s number`,
+    text: `${v.people[0].toUpperCase()}${v.people.slice(1)} keep messaging the number they already know. We plug in the assistant behind it.`,
     Art: ConnectIllustration,
   },
   done: {
     title: "You're almost live",
-    text: "We're setting things up for you. You'll hear from us as soon as your clinic is ready.",
+    text: `We're setting things up for you. You'll hear from us as soon as your ${v.noun} is ready.`,
     Art: DoneIllustration,
   },
-};
+}[step]);
 
-const BENEFITS = [
+const benefits = (v: Vertical) => [
   "30-day free trial, no card needed",
   "Ready in about 3 minutes",
-  "Patients can chat in their own language",
+  `${v.people[0].toUpperCase()}${v.people.slice(1)} can chat in their own language`,
 ];
 
-function VisualPanel({ step }: { step: Step }) {
-  const { title, text, Art } = PANEL[step];
+function VisualPanel({ step, v }: { step: Step; v: Vertical }) {
+  const { title, text, Art } = panel(step, v);
+  const BENEFITS = benefits(v);
   return (
     <aside className="lg:rounded-3xl lg:border lg:border-white/60 lg:bg-white/40 lg:p-10 lg:shadow-sm lg:backdrop-blur-sm">
       <div className="mx-auto w-full max-w-[15rem] sm:max-w-xs lg:max-w-md">
@@ -137,16 +134,36 @@ function VisualPanel({ step }: { step: Step }) {
   );
 }
 
+function Chooser({ onPick }: { onPick: (k: VerticalKey) => void }) {
+  return (
+    <div className="mx-auto w-full max-w-xl rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
+      <h1 className="font-display text-2xl font-bold text-[var(--navy)]">What kind of business do you run?</h1>
+      <p className="mt-1 text-sm text-[var(--slate)]">We&apos;ll set up the right assistant for you.</p>
+      <div className="mt-6 grid gap-3">
+        {VERTICAL_KEYS.map((k) => (
+          <button key={k} type="button" onClick={() => onPick(k)}
+            className="rounded-xl border border-[var(--border)] px-4 py-4 text-left transition hover:border-[var(--teal)] hover:bg-[var(--mist)]">
+            <span className="block text-base font-semibold text-[var(--navy)]">{VERTICALS[k].label}</span>
+            <span className="mt-0.5 block text-sm text-[var(--slate)]">{VERTICALS[k].chooserHint}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function GetStarted() {
+  const [type, setType] = useState<VerticalKey | null>(null);
+  const [typeChecked, setTypeChecked] = useState(false);
   const [step, setStep] = useState<Step>("details");
   const [signupId, setSignupId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
-  const [result, setResult] = useState<{ clinic_name?: string; display_phone_number?: string; status?: string }>({});
+  const [result, setResult] = useState<{ business_name?: string; clinic_name?: string; display_phone_number?: string; status?: string }>({});
   const [form, setForm] = useState({
-    doctor_name: "",
-    clinic_name: "",
+    owner_name: "",
+    business_name: "",
     email: "",
     mobile: "",
     city: "",
@@ -156,12 +173,34 @@ export default function GetStarted() {
   const sessionInfo = useRef<SessionInfo>({});
   const cancelled = useRef(false);
 
+  const v = type ? VERTICALS[type] : null;
+
+  const pick = (k: VerticalKey) => {
+    setType(k);
+    try { window.history.replaceState(null, "", `?type=${k}`); } catch { /* ignore */ }
+  };
+
+  // Which business type: from the link (?type=salon), else from an unfinished signup, else the visitor chooses
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("type");
+    if (isVertical(fromLink)) setType(fromLink);
+    else {
+      const saved = store(STORAGE_KEY) ?? "";
+      const savedType = saved.includes(":") ? saved.split(":")[0] : saved ? "clinic" : "";     // older saves were clinic-only
+      if (isVertical(savedType)) setType(savedType);
+    }
+    setTypeChecked(true);
+  }, []);
+
   // Resume an in-progress signup after refresh
   useEffect(() => {
-    const saved = store(STORAGE_KEY);
-    if (!saved) return;
-    api<{ status: string; clinic_name: string; display_phone_number?: string }>(
-      `/api/v1/onboarding/status/${saved}`
+    if (!type) return;
+    const raw = store(STORAGE_KEY) ?? "";
+    const [savedType, savedId] = raw.includes(":") ? raw.split(":") : ["clinic", raw];
+    if (!savedId || savedType !== type) return;
+    const saved = savedId;
+    api<{ status: string; business_name?: string; clinic_name?: string; display_phone_number?: string }>(
+      VERTICALS[type].apiUrl, `/api/v1/onboarding/status/${saved}`
     )
       .then((s) => {
         setSignupId(saved);
@@ -171,7 +210,7 @@ export default function GetStarted() {
       .catch(() => {
         /* stale id — start fresh */
       });
-  }, []);
+  }, [type]);
 
   // Facebook SDK init
   useEffect(() => {
@@ -210,11 +249,12 @@ export default function GetStarted() {
     setError(null);
     setBusy(true);
     try {
-      const { signup_id } = await api<{ signup_id: string }>("/api/v1/onboarding/start", {
+      if (!v) return;
+      const { signup_id } = await api<{ signup_id: string }>(v.apiUrl, "/api/v1/onboarding/start", {
         method: "POST",
         body: JSON.stringify({
-          owner_name: form.doctor_name,
-          business_name: form.clinic_name,
+          owner_name: form.owner_name,
+          business_name: form.business_name,
           email: form.email,
           mobile: form.mobile,
           city: form.city,
@@ -222,7 +262,7 @@ export default function GetStarted() {
         }),
       });
       setSignupId(signup_id);
-      store(STORAGE_KEY, signup_id);
+      store(STORAGE_KEY, `${type}:${signup_id}`);
       setStep("connect");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save your details.");
@@ -238,8 +278,8 @@ export default function GetStarted() {
         await new Promise((r) => setTimeout(r, 250));
       }
       try {
-        const res = await api<{ status: string; clinic_name: string; display_phone_number: string }>(
-          "/api/v1/onboarding/complete",
+        const res = await api<{ status: string; business_name?: string; clinic_name?: string; display_phone_number: string }>(
+          VERTICALS[type as VerticalKey].apiUrl, "/api/v1/onboarding/complete",
           {
             method: "POST",
             body: JSON.stringify({ signup_id: signupId, code, ...sessionInfo.current }),
@@ -253,7 +293,7 @@ export default function GetStarted() {
         setBusy(false);
       }
     },
-    [signupId]
+    [signupId, type]
   );
 
   const launch = () => {
@@ -291,6 +331,16 @@ export default function GetStarted() {
     );
   };
 
+  if (!typeChecked) return null;
+  if (!v) {
+    return (
+      <div className="mx-auto w-full max-w-6xl">
+        <a href="/" className="mb-8 inline-block" aria-label="ParroConnect home"><Logo size="sm" noTag /></a>
+        <Chooser onPick={pick} />
+      </div>
+    );
+  }
+
   return (
     <>
       <Script src="https://connect.facebook.net/en_US/sdk.js" strategy="afterInteractive" crossOrigin="anonymous" />
@@ -301,10 +351,10 @@ export default function GetStarted() {
         </a>
 
         <div className="grid items-center gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-        <VisualPanel step={step} />
+        <VisualPanel step={step} v={v} />
 
         <div className="mx-auto w-full max-w-xl rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8 lg:max-w-none">
-          <Stepper step={step} />
+          <Stepper step={step} v={v} />
 
           {step === "details" && (
             <form onSubmit={submitDetails} className="space-y-4">
@@ -316,20 +366,20 @@ export default function GetStarted() {
               </div>
 
               <label className="block text-sm font-medium text-[var(--navy)]">
-                Doctor name
-                <input required minLength={2} className={inputCls} value={form.doctor_name} autoComplete="name"
-                  onChange={(e) => setForm({ ...form, doctor_name: e.target.value })} placeholder="Dr. Priya Kumar" />
+                {v.ownerLabel}
+                <input required minLength={2} className={inputCls} value={form.owner_name} autoComplete="name"
+                  onChange={(e) => setForm({ ...form, owner_name: e.target.value })} placeholder={v.ownerPlaceholder} />
               </label>
               <label className="block text-sm font-medium text-[var(--navy)]">
-                Clinic name
-                <input required minLength={2} className={inputCls} value={form.clinic_name} autoComplete="organization"
-                  onChange={(e) => setForm({ ...form, clinic_name: e.target.value })} placeholder="Sunrise Family Clinic" />
+                {v.businessLabel}
+                <input required minLength={2} className={inputCls} value={form.business_name} autoComplete="organization"
+                  onChange={(e) => setForm({ ...form, business_name: e.target.value })} placeholder={v.businessPlaceholder} />
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-[var(--navy)]">
                   Email
                   <input required type="email" className={inputCls} value={form.email} autoComplete="email"
-                    onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@clinic.com" />
+                    onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={v.emailPlaceholder} />
                 </label>
                 <label className="block text-sm font-medium text-[var(--navy)]">
                   Your mobile
@@ -344,7 +394,7 @@ export default function GetStarted() {
                     onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Chennai" />
                 </label>
                 <label className="block text-sm font-medium text-[var(--navy)]">
-                  Patients mostly speak
+                  {v.languageLabel}
                   <select className={inputCls} value={form.language}
                     onChange={(e) => setForm({ ...form, language: e.target.value })}>
                     {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
@@ -370,15 +420,15 @@ export default function GetStarted() {
               <div>
                 <h1 className="font-display text-2xl font-bold text-[var(--navy)]">Connect your WhatsApp</h1>
                 <p className="mt-1 text-sm text-[var(--slate)]">
-                  Your patients will message the number you connect here. You stay in control of your account.
+                  Your {v.people} will message the number you connect here. You stay in control of your account.
                 </p>
               </div>
 
               <ul className="space-y-3 rounded-xl bg-[var(--mist)] p-4 text-sm text-[var(--slate)]">
                 <li className="flex gap-2"><MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--teal)]" />
-                  Have your clinic phone number ready — you&apos;ll get a verification code by SMS or call.</li>
+                  Have your {v.noun} phone number ready — you&apos;ll get a verification code by SMS or call.</li>
                 <li className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--teal)]" />
-                  A Facebook window opens. Log in with the Facebook account that manages your clinic and follow the steps.</li>
+                  A Facebook window opens. Log in with the Facebook account that manages your {v.noun} and follow the steps.</li>
                 <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--teal)]" />
                   We never see your Facebook password.</li>
               </ul>
@@ -391,7 +441,7 @@ export default function GetStarted() {
               </button>
               <button type="button" onClick={() => { store(STORAGE_KEY, ""); setStep("details"); setError(null); }}
                 className="w-full text-center text-sm text-[var(--slate)] underline">
-                Edit clinic details
+                Edit {v.noun} details
               </button>
             </div>
           )}
@@ -403,10 +453,10 @@ export default function GetStarted() {
                 {result.status === "approved" ? "You're live!" : "WhatsApp connected"}
               </h1>
               <p className="text-sm leading-relaxed text-[var(--slate)]">
-                {result.clinic_name && <><strong>{result.clinic_name}</strong>{result.display_phone_number && <> ({result.display_phone_number})</>} is connected. </>}
+                {(result.business_name ?? result.clinic_name) && <><strong>{result.business_name ?? result.clinic_name}</strong>{result.display_phone_number && <> ({result.display_phone_number})</>} is connected. </>}
                 {result.status === "approved"
                   ? "Your free trial is active."
-                  : "Our team is setting up your clinic — we usually finish within one working day. We'll contact you with your dashboard login as soon as you're approved. Your 30-day free trial starts then."}
+                  : "Our team is setting up your {v.noun} — we usually finish within one working day. We'll contact you with your dashboard login as soon as you're approved. Your 30-day free trial starts then."}
               </p>
               <a href="/" className="inline-block rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--navy)]">
                 Back to home

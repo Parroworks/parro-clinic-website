@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { VERTICALS, VERTICAL_KEYS, type VerticalKey } from "@/lib/verticals";
 
 type Signup = {
   id: string;
@@ -33,11 +34,11 @@ type ClinicBilling = {
   cycle: string | null;
 };
 
-const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-const TOKEN_KEY = "parro_admin_token";
+const tokenKey = (v: VerticalKey) => `parro_admin_token_${v}`;
 const FILTERS = ["pending_approval", "details_submitted", "approved", "rejected"];
 
 export default function SignupsAdmin() {
+  const [vertical, setVertical] = useState<VerticalKey>("clinic");
   const [token, setToken] = useState<string | null>(null);
   const [adminName, setAdminName] = useState("");
   const [needsChange, setNeedsChange] = useState(false);
@@ -52,15 +53,16 @@ export default function SignupsAdmin() {
   const [billing, setBilling] = useState<ClinicBilling[] | null>(null);
 
   const signOut = () => {
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* storage unavailable */ }
+    try { sessionStorage.removeItem(tokenKey(vertical)); } catch { /* storage unavailable */ }
     setToken(null);
     setRows(null);
     setBilling(null);
     setNeedsChange(false);
   };
 
-  const call = async (path: string, init?: RequestInit, withToken: string | null = token) => {
-    const res = await fetch(`${API}${path}`, {
+  const call = async (path: string, init?: RequestInit, withToken: string | null = token, v: VerticalKey = vertical) => {
+    if (!VERTICALS[v].apiUrl) throw new Error(`The ${VERTICALS[v].label} backend URL is not configured on this site`);
+    const res = await fetch(`${VERTICALS[v].apiUrl}${path}`, {
       ...init,
       headers: { "Content-Type": "application/json", ...(withToken ? { Authorization: `Bearer ${withToken}` } : {}) },
     });
@@ -78,7 +80,7 @@ export default function SignupsAdmin() {
   };
 
   const start = (t: string, name: string, mustChange: boolean) => {
-    try { sessionStorage.setItem(TOKEN_KEY, t); } catch { /* storage unavailable */ }
+    try { sessionStorage.setItem(tokenKey(vertical), t); } catch { /* storage unavailable */ }
     setToken(t);
     setAdminName(name);
     setNeedsChange(mustChange);
@@ -110,15 +112,22 @@ export default function SignupsAdmin() {
     }
   };
 
+  // Each business type has its own backend and its own admin logins: switching clears the screen and restores that one's session
   useEffect(() => {
+    setToken(null);
+    setRows(null);
+    setBilling(null);
+    setNeedsChange(false);
+    setError(null);
+    setLogin(null);
     let saved: string | null = null;
-    try { saved = sessionStorage.getItem(TOKEN_KEY); } catch { /* storage unavailable */ }
+    try { saved = sessionStorage.getItem(tokenKey(vertical)); } catch { /* storage unavailable */ }
     if (!saved) return;
-    call("/api/v1/admin/me", undefined, saved)
+    call("/api/v1/admin/me", undefined, saved, vertical)
       .then((d) => start(saved as string, d.admin.name, d.admin.must_change_password))
       .catch(() => signOut());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [vertical]);
 
   useEffect(() => {
     if (token && !needsChange) { void load(); void loadBilling(); }
@@ -198,8 +207,16 @@ export default function SignupsAdmin() {
 
   return (
     <div className={token && !needsChange ? "mx-auto max-w-5xl" : "mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center"}>
+      <div className={`mb-4 flex gap-2 ${token && !needsChange ? "" : "justify-center"}`} role="tablist" aria-label="Business type">
+        {VERTICAL_KEYS.map((k) => (
+          <button key={k} type="button" role="tab" aria-selected={k === vertical} onClick={() => setVertical(k)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium ${k === vertical ? "bg-[var(--navy)] text-white" : "border border-[var(--border)] bg-white text-[var(--slate)]"}`}>
+            {VERTICALS[k].label}
+          </button>
+        ))}
+      </div>
       <h1 className={`font-display text-2xl font-bold text-[var(--navy)] ${token && !needsChange ? "" : "text-center"}`}>
-        {!token ? "Admin login" : needsChange ? "Set your password" : "Clinic signups"}
+        {!token ? `${VERTICALS[vertical].label} admin login` : needsChange ? "Set your password" : `${VERTICALS[vertical].label} signups`}
       </h1>
 
       {!token && (
@@ -300,10 +317,10 @@ export default function SignupsAdmin() {
 
       {billing && (
         <section className="mt-10">
-          <h2 className="font-display text-xl font-bold text-[var(--navy)]">Clinic billing</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--navy)]">Billing</h2>
           <p className="mt-1 text-sm text-[var(--slate)]">Trial and subscription status. Adjust manually if a clinic pays you outside Razorpay.</p>
           <div className="mt-4 space-y-3">
-            {billing.length === 0 && <p className="text-sm text-[var(--slate)]">No clinics on a trial or plan yet.</p>}
+            {billing.length === 0 && <p className="text-sm text-[var(--slate)]">No businesses on a trial or plan yet.</p>}
             {billing.map((c) => (
               <div key={c.tenant_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white p-4">
                 <div>
