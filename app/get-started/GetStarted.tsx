@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import Logo from "@/components/Logo";
-import { VERTICALS, VERTICAL_KEYS, isVertical, type Vertical, type VerticalKey } from "@/lib/verticals";
+import { VERTICALS, type Vertical, type VerticalKey } from "@/lib/verticals";
 import { ClinicIllustration, ConnectIllustration, DoneIllustration } from "./illustrations";
 
 declare global {
@@ -134,27 +134,10 @@ function VisualPanel({ step, v }: { step: Step; v: Vertical }) {
   );
 }
 
-function Chooser({ onPick }: { onPick: (k: VerticalKey) => void }) {
-  return (
-    <div className="mx-auto w-full max-w-xl rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="font-display text-2xl font-bold text-[var(--navy)]">What kind of business do you run?</h1>
-      <p className="mt-1 text-sm text-[var(--slate)]">We&apos;ll set up the right assistant for you.</p>
-      <div className="mt-6 grid gap-3">
-        {VERTICAL_KEYS.map((k) => (
-          <button key={k} type="button" onClick={() => onPick(k)}
-            className="rounded-xl border border-[var(--border)] px-4 py-4 text-left transition hover:border-[var(--teal)] hover:bg-[var(--mist)]">
-            <span className="block text-base font-semibold text-[var(--navy)]">{VERTICALS[k].label}</span>
-            <span className="mt-0.5 block text-sm text-[var(--slate)]">{VERTICALS[k].chooserHint}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default function GetStarted() {
-  const [type, setType] = useState<VerticalKey | null>(null);
-  const [typeChecked, setTypeChecked] = useState(false);
+// One signup flow, one page per business type (/get-started for clinics, /get-started-salon for salons).
+export default function GetStarted({ vertical = "clinic" }: { vertical?: VerticalKey }) {
+  const v = VERTICALS[vertical];
+  const storageKey = vertical === "clinic" ? STORAGE_KEY : `${STORAGE_KEY}_${vertical}`;     // clinics keep the original key
   const [step, setStep] = useState<Step>("details");
   const [signupId, setSignupId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -173,34 +156,12 @@ export default function GetStarted() {
   const sessionInfo = useRef<SessionInfo>({});
   const cancelled = useRef(false);
 
-  const v = type ? VERTICALS[type] : null;
-
-  const pick = (k: VerticalKey) => {
-    setType(k);
-    try { window.history.replaceState(null, "", `?type=${k}`); } catch { /* ignore */ }
-  };
-
-  // Which business type: from the link (?type=salon), else from an unfinished signup, else the visitor chooses
-  useEffect(() => {
-    const fromLink = new URLSearchParams(window.location.search).get("type");
-    if (isVertical(fromLink)) setType(fromLink);
-    else {
-      const saved = store(STORAGE_KEY) ?? "";
-      const savedType = saved.includes(":") ? saved.split(":")[0] : saved ? "clinic" : "";     // older saves were clinic-only
-      if (isVertical(savedType)) setType(savedType);
-    }
-    setTypeChecked(true);
-  }, []);
-
   // Resume an in-progress signup after refresh
   useEffect(() => {
-    if (!type) return;
-    const raw = store(STORAGE_KEY) ?? "";
-    const [savedType, savedId] = raw.includes(":") ? raw.split(":") : ["clinic", raw];
-    if (!savedId || savedType !== type) return;
-    const saved = savedId;
+    const saved = store(storageKey);
+    if (!saved) return;
     api<{ status: string; business_name?: string; clinic_name?: string; display_phone_number?: string }>(
-      VERTICALS[type].apiUrl, `/api/v1/onboarding/status/${saved}`
+      v.apiUrl, `/api/v1/onboarding/status/${saved}`
     )
       .then((s) => {
         setSignupId(saved);
@@ -210,7 +171,7 @@ export default function GetStarted() {
       .catch(() => {
         /* stale id — start fresh */
       });
-  }, [type]);
+  }, [storageKey, v.apiUrl]);
 
   // Facebook SDK init
   useEffect(() => {
@@ -249,7 +210,6 @@ export default function GetStarted() {
     setError(null);
     setBusy(true);
     try {
-      if (!v) return;
       const { signup_id } = await api<{ signup_id: string }>(v.apiUrl, "/api/v1/onboarding/start", {
         method: "POST",
         body: JSON.stringify({
@@ -262,7 +222,7 @@ export default function GetStarted() {
         }),
       });
       setSignupId(signup_id);
-      store(STORAGE_KEY, `${type}:${signup_id}`);
+      store(storageKey, signup_id);
       setStep("connect");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save your details.");
@@ -279,7 +239,7 @@ export default function GetStarted() {
       }
       try {
         const res = await api<{ status: string; business_name?: string; clinic_name?: string; display_phone_number: string }>(
-          VERTICALS[type as VerticalKey].apiUrl, "/api/v1/onboarding/complete",
+          v.apiUrl, "/api/v1/onboarding/complete",
           {
             method: "POST",
             body: JSON.stringify({ signup_id: signupId, code, ...sessionInfo.current }),
@@ -293,7 +253,7 @@ export default function GetStarted() {
         setBusy(false);
       }
     },
-    [signupId, type]
+    [signupId, v.apiUrl]
   );
 
   const launch = () => {
@@ -330,16 +290,6 @@ export default function GetStarted() {
       }
     );
   };
-
-  if (!typeChecked) return null;
-  if (!v) {
-    return (
-      <div className="mx-auto w-full max-w-6xl">
-        <a href="/" className="mb-8 inline-block" aria-label="ParroConnect home"><Logo size="sm" noTag /></a>
-        <Chooser onPick={pick} />
-      </div>
-    );
-  }
 
   return (
     <>
@@ -439,7 +389,7 @@ export default function GetStarted() {
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--wa-green)] px-4 py-3.5 text-base font-semibold text-[#062812] transition hover:bg-[#1ebe57] disabled:cursor-not-allowed disabled:opacity-60">
                 {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Connecting…</> : sdkReady ? "Connect WhatsApp" : "Loading…"}
               </button>
-              <button type="button" onClick={() => { store(STORAGE_KEY, ""); setStep("details"); setError(null); }}
+              <button type="button" onClick={() => { store(storageKey, ""); setStep("details"); setError(null); }}
                 className="w-full text-center text-sm text-[var(--slate)] underline">
                 Edit {v.noun} details
               </button>

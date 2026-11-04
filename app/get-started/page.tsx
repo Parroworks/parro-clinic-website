@@ -4,7 +4,7 @@ import GetStarted from "./GetStarted";
 export const metadata: Metadata = {
   title: "Start your free trial — ParroConnect",
   description:
-    "Connect your business's WhatsApp number to ParroConnect in a few minutes. Free trial, no credit card required.",
+    "Connect your clinic's WhatsApp number to ParroConnect in a few minutes. Free trial, no credit card required.",
 };
 
 export default function GetStartedPage() {
