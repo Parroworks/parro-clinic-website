@@ -156,7 +156,8 @@ export default function GetStarted({ vertical = "clinic" }: { vertical?: Vertica
   const sessionInfo = useRef<SessionInfo>({});
   const cancelled = useRef(false);
 
-  // Resume an in-progress signup after refresh
+  // Resume an UNFINISHED signup after a refresh (details saved, WhatsApp not connected yet). A finished one is forgotten,
+  // so coming back later starts a fresh registration instead of showing the old "connected" screen.
   useEffect(() => {
     const saved = store(storageKey);
     if (!saved) return;
@@ -164,12 +165,16 @@ export default function GetStarted({ vertical = "clinic" }: { vertical?: Vertica
       v.apiUrl, `/api/v1/onboarding/status/${saved}`
     )
       .then((s) => {
+        if (s.status !== "details_submitted") {
+          store(storageKey, "");
+          return;
+        }
         setSignupId(saved);
         setResult(s);
-        setStep(s.status === "details_submitted" ? "connect" : "done");
+        setStep("connect");
       })
       .catch(() => {
-        /* stale id — start fresh */
+        store(storageKey, "");          // unknown or stale id: start fresh
       });
   }, [storageKey, v.apiUrl]);
 
@@ -408,7 +413,7 @@ export default function GetStarted({ vertical = "clinic" }: { vertical?: Vertica
                   ? "Your free trial is active."
                   : "Our team is setting up your {v.noun} — we usually finish within one working day. We'll contact you with your dashboard login as soon as you're approved. Your 30-day free trial starts then."}
               </p>
-              <a href="/" className="inline-block rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--navy)]">
+              <a href="/" onClick={() => store(storageKey, "")} className="inline-block rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--navy)]">
                 Back to home
               </a>
             </div>
