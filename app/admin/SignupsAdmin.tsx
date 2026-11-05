@@ -69,6 +69,7 @@ export default function SignupsAdmin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("pending_approval");
   const [rows, setRows] = useState<Signup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -220,7 +221,7 @@ export default function SignupsAdmin() {
     setBusyId(s.id);
     try {
       const data = await call(`/api/v1/admin/signups/${s.id}/${action}`, { method: "POST", body: body ?? "{}" });
-      if (action === "approve") setLogin({ clinic: s.business_name, login: data.login });
+      if (action === "approve") setLogin({ clinic: `${s.business_name} approved`, login: data.login });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed");
@@ -228,6 +229,29 @@ export default function SignupsAdmin() {
       setBusyId(null);
     }
   };
+
+  const resetLogin = async (s: Signup) => {
+    if (!window.confirm(`Issue a new temporary PIN for ${s.business_name}? Their current PIN stops working.`)) return;
+    setBusyId(s.id);
+    setError(null);
+    try {
+      const data = await call(`/api/v1/admin/signups/${s.id}/reset-login`, { method: "POST", body: "{}" });
+      setLogin({ clinic: `${s.business_name} — PIN reset`, login: data.login });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not reset the PIN");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Search by business, owner, email, or any part of a phone number (the signup mobile or the WhatsApp number).
+  const q = query.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const shown = rows?.filter((r) => {
+    if (!q) return true;
+    if ([r.business_name, r.owner_name, r.email, r.city ?? ""].some((v) => v.toLowerCase().includes(q))) return true;
+    return qDigits.length >= 3 && [r.mobile, r.display_phone_number ?? ""].some((v) => v.replace(/\D/g, "").includes(qDigits));
+  });
 
   return (
     <div className={token && !needsChange ? "mx-auto max-w-5xl" : "mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center"}>
@@ -277,6 +301,8 @@ export default function SignupsAdmin() {
               {f.replace("_", " ")}
             </button>
           ))}
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, email or number"
+            aria-label="Search signups" className="ml-auto w-full rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm sm:w-64" />
         </div>
       )}
 
@@ -284,7 +310,7 @@ export default function SignupsAdmin() {
 
       {login && (
         <div className="mt-4 rounded-xl border border-[var(--teal)]/40 bg-[var(--teal-light)] p-4 text-sm">
-          <p className="font-semibold text-[var(--navy)]">{login.clinic} approved — dashboard login (shown once)</p>
+          <p className="font-semibold text-[var(--navy)]">{login.clinic} — dashboard login (shown once)</p>
           <p className="mt-1 font-mono">username: {login.login.username} &nbsp; PIN: {login.login.pin}</p>
           <p className="mt-1 text-[var(--slate)]">{login.login.note}</p>
           <button onClick={() => setLogin(null)} className="mt-2 text-xs underline">Dismiss</button>
@@ -292,8 +318,8 @@ export default function SignupsAdmin() {
       )}
 
       <div className="mt-6 space-y-3">
-        {rows?.length === 0 && <p className="text-sm text-[var(--slate)]">Nothing here.</p>}
-        {rows?.map((s) => (
+        {shown?.length === 0 && <p className="text-sm text-[var(--slate)]">{q ? "No match for this search." : "Nothing here."}</p>}
+        {shown?.map((s) => (
           <div key={s.id} className="rounded-xl border border-[var(--border)] bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -375,8 +401,14 @@ export default function SignupsAdmin() {
                 <p className="mt-1 text-xs text-[var(--slate)]">{new Date(s.created_at).toLocaleString()}</p>
               </div>
               {s.status === "approved" && (
-                <button disabled={busyId === s.id} onClick={() => refreshStatus(s)}
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh status</button>
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={busyId === s.id} onClick={() => refreshStatus(s)}
+                    className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh status</button>
+                  {vertical === "clinic" && (
+                    <button disabled={busyId === s.id} onClick={() => resetLogin(s)}
+                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Reset login PIN</button>
+                  )}
+                </div>
               )}
               {s.status === "pending_approval" && (
                 <div className="flex gap-2">
