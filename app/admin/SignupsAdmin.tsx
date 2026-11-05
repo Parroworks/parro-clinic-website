@@ -16,7 +16,31 @@ type Signup = {
   registration_note?: string;
   created_at: string;
   messaging_ready?: boolean;
-  provisioning?: { templates?: Record<string, string>; error?: string | null };
+  setup?: { key: string; label: string; ok: boolean; detail?: string | null }[];
+  provisioning?: { templates?: Record<string, string>; error?: string | null; health?: Health };
+};
+
+type Part<T> = T & { error?: string };
+type Health = {
+  checked_at?: string;
+  templates_error?: string;
+  number?: Part<{ quality_rating?: string; messaging_limit_tier?: string; name_status?: string; status?: string; verified_name?: string }>;
+  account?: Part<{ account_review_status?: string; business_verification_status?: string; currency?: string }>;
+  usage?: {
+    days: number;
+    messages?: Part<{ sent?: number; delivered?: number }>;
+    cost?: Part<{ total?: number; by_category?: Record<string, { volume: number; cost: number }> }>;
+  };
+};
+
+const QUALITY_COLOR: Record<string, string> = {
+  GREEN: "bg-[var(--teal-light)] text-[var(--teal-dark)]", YELLOW: "bg-amber-50 text-[var(--amber)]", RED: "bg-red-50 text-[var(--coral)]",
+};
+const tier = (t?: string) => (t ? `${t.replace("TIER_", "")}${t === "UNLIMITED" ? "" : " / 24h"}` : "—");
+const ago = (iso?: string) => {
+  if (!iso) return "";
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
 };
 
 type Login = { username: string; pin: string; note: string };
@@ -166,14 +190,14 @@ export default function SignupsAdmin() {
     }
   };
 
-  const refreshTemplates = async (s: Signup) => {
+  const refreshStatus = async (s: Signup) => {
     setBusyId(s.id);
     setError(null);
     try {
-      const data = await call(`/api/v1/admin/signups/${s.id}/templates/refresh`, { method: "POST", body: "{}" });
-      setRows((cur) => cur && cur.map((r) => (r.id === s.id ? { ...r, provisioning: { ...r.provisioning, templates: data.templates } } : r)));
+      const data = await call(`/api/v1/admin/signups/${s.id}/status/refresh`, { method: "POST", body: "{}" });
+      setRows((cur) => cur && cur.map((r) => (r.id === s.id ? { ...r, setup: data.setup, provisioning: { ...r.provisioning, templates: data.templates, health: data.health } } : r)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not refresh templates");
+      setError(e instanceof Error ? e.message : "Could not refresh status");
     } finally {
       setBusyId(null);
     }
@@ -279,6 +303,44 @@ export default function SignupsAdmin() {
                   WhatsApp: {s.display_phone_number ?? "not connected"}{s.phone_status ? ` (${s.phone_status})` : ""}
                 </p>
                 {s.registration_note && <p className="mt-1 text-xs text-[var(--amber)]">{s.registration_note}</p>}
+                {s.status === "approved" && s.setup && (
+                  <p className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                    {s.setup.map((i) => (
+                      <span key={i.key} title={i.detail ?? undefined}
+                        className={`rounded-full px-2 py-0.5 font-medium ${i.ok ? "bg-[var(--teal-light)] text-[var(--teal-dark)]" : "bg-amber-50 text-[var(--amber)]"}`}>
+                        {i.ok ? "✓" : "…"} {i.label}{i.key === "templates" && i.detail ? ` ${i.detail}` : ""}
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {s.status === "approved" && s.provisioning?.health && (() => {
+                  const h = s.provisioning.health as Health;
+                  const n = h.number, a = h.account, m = h.usage?.messages, c = h.usage?.cost;
+                  return (
+                    <div className="mt-2 space-y-1 text-sm text-[var(--slate)]">
+                      <p>
+                        Number:{" "}
+                        {n?.error ? <span className="text-[var(--coral)]">{n.error}</span> : (<>
+                          <span className={`mr-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_COLOR[n?.quality_rating ?? ""] ?? "bg-[var(--mist)]"}`}>
+                            quality {n?.quality_rating ?? "—"}</span>
+                          limit {tier(n?.messaging_limit_tier)} · {n?.status ?? "—"} · name {n?.name_status ?? "—"}
+                        </>)}
+                      </p>
+                      <p>
+                        Account:{" "}
+                        {a?.error ? <span className="text-[var(--coral)]">{a.error}</span>
+                          : <>review {a?.account_review_status ?? "—"} · business verification {a?.business_verification_status ?? "—"}</>}
+                      </p>
+                      <p>
+                        Last {h.usage?.days ?? 30} days:{" "}
+                        {m?.error ? <span className="text-[var(--coral)]">{m.error}</span> : <>{m?.sent ?? 0} sent, {m?.delivered ?? 0} delivered</>}
+                        {c?.error ? null : <> · est. cost {c?.total ?? 0}{a?.currency ? ` ${a.currency}` : ""}</>}
+                      </p>
+                      {h.templates_error && <p className="text-xs text-[var(--coral)]">Templates: {h.templates_error}</p>}
+                      <p className="text-xs">Checked {ago(h.checked_at)}</p>
+                    </div>
+                  );
+                })()}
                 {s.status === "approved" && (
                   <p className="mt-1 text-sm text-[var(--slate)]">
                     Templates:{" "}
@@ -299,8 +361,8 @@ export default function SignupsAdmin() {
                 <p className="mt-1 text-xs text-[var(--slate)]">{new Date(s.created_at).toLocaleString()}</p>
               </div>
               {s.status === "approved" && (
-                <button disabled={busyId === s.id} onClick={() => refreshTemplates(s)}
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh templates</button>
+                <button disabled={busyId === s.id} onClick={() => refreshStatus(s)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh status</button>
               )}
               {s.status === "pending_approval" && (
                 <div className="flex gap-2">
