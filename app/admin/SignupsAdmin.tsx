@@ -303,61 +303,75 @@ export default function SignupsAdmin() {
                   WhatsApp: {s.display_phone_number ?? "not connected"}{s.phone_status ? ` (${s.phone_status})` : ""}
                 </p>
                 {s.registration_note && <p className="mt-1 text-xs text-[var(--amber)]">{s.registration_note}</p>}
-                {s.status === "approved" && s.setup && (
-                  <p className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                    {s.setup.map((i) => (
-                      <span key={i.key} title={i.detail ?? undefined}
-                        className={`rounded-full px-2 py-0.5 font-medium ${i.ok ? "bg-[var(--teal-light)] text-[var(--teal-dark)]" : "bg-amber-50 text-[var(--amber)]"}`}>
-                        {i.ok ? "✓" : "…"} {i.label}{i.key === "templates" && i.detail ? ` ${i.detail}` : ""}
-                      </span>
-                    ))}
-                  </p>
-                )}
-                {s.status === "approved" && s.provisioning?.health && (() => {
-                  const h = s.provisioning.health as Health;
-                  const n = h.number, a = h.account, m = h.usage?.messages, c = h.usage?.cost;
+                {s.status === "approved" && (() => {
+                  const steps = s.setup ?? [];
+                  const ready = steps.find((i) => i.key === "ready");
+                  const aiSteps = steps.filter((i) => ["business", "project", "waba", "token", "webhook"].includes(i.key));
+                  const tplStep = steps.find((i) => i.key === "templates");
+                  const h = s.provisioning?.health as Health | undefined;
+                  const n = h?.number, a = h?.account, m = h?.usage?.messages, c = h?.usage?.cost;
+                  const chip = (i: { key: string; label: string; ok: boolean; detail?: string | null }) => (
+                    <span key={i.key} title={i.detail ?? undefined}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${i.ok ? "bg-[var(--teal-light)] text-[var(--teal-dark)]" : "bg-amber-50 text-[var(--amber)]"}`}>
+                      {i.ok ? "✓" : "…"} {i.label}{i.key === "templates" && i.detail ? ` ${i.detail}` : ""}
+                    </span>
+                  );
                   return (
-                    <div className="mt-2 space-y-1 text-sm text-[var(--slate)]">
-                      <p>
-                        Number:{" "}
-                        {n?.error ? <span className="text-[var(--coral)]">{n.error}</span> : (<>
-                          <span className={`mr-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_COLOR[n?.quality_rating ?? ""] ?? "bg-[var(--mist)]"}`}>
-                            quality {n?.quality_rating ?? "—"}</span>
-                          limit {tier(n?.messaging_limit_tier)} · {n?.status ?? "—"} · name {n?.name_status ?? "—"}
-                        </>)}
-                      </p>
-                      <p>
-                        Account:{" "}
-                        {a?.error ? <span className="text-[var(--coral)]">{a.error}</span>
-                          : <>review {a?.account_review_status ?? "—"} · business verification {a?.business_verification_status ?? "—"}</>}
-                      </p>
-                      <p>
-                        Last {h.usage?.days ?? 30} days:{" "}
-                        {m?.error ? <span className="text-[var(--coral)]">{m.error}</span> : <>{m?.sent ?? 0} sent, {m?.delivered ?? 0} delivered</>}
-                        {c?.error ? null : <> · est. cost {c?.total ?? 0}{a?.currency ? ` ${a.currency}` : ""}</>}
-                      </p>
-                      {h.templates_error && <p className="text-xs text-[var(--coral)]">Templates: {h.templates_error}</p>}
-                      <p className="text-xs">Checked {ago(h.checked_at)}</p>
+                    <div className="mt-3 space-y-2">
+                      {ready && (
+                        <p className="text-sm font-medium text-[var(--navy)]">
+                          Overall: {ready.ok ? "✓ Messaging ready" : "… Messaging not ready yet"}
+                        </p>
+                      )}
+                      <div className="rounded-lg border border-[var(--border)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">AiSensy</p>
+                        <p className="mt-1.5 flex flex-wrap gap-1.5">{aiSteps.map(chip)}</p>
+                        {s.provisioning?.error && <p className="mt-1.5 text-xs text-[var(--coral)]">Setup error: {s.provisioning.error}</p>}
+                      </div>
+                      <div className="rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--slate)]">
+                        <p className="text-xs font-semibold uppercase tracking-wide">Meta (WhatsApp Business)</p>
+                        {h ? (
+                          <div className="mt-1.5 space-y-1">
+                            <p>
+                              Number:{" "}
+                              {n?.error ? <span className="text-[var(--coral)]">{n.error}</span> : (<>
+                                <span className={`mr-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_COLOR[n?.quality_rating ?? ""] ?? "bg-[var(--mist)]"}`}>
+                                  quality {n?.quality_rating ?? "—"}</span>
+                                limit {tier(n?.messaging_limit_tier)} · {n?.status ?? "—"} · name {n?.name_status ?? "—"}
+                              </>)}
+                            </p>
+                            <p>
+                              Account:{" "}
+                              {a?.error ? <span className="text-[var(--coral)]">{a.error}</span>
+                                : <>review {a?.account_review_status ?? "—"} · business verification {a?.business_verification_status ?? "—"}</>}
+                            </p>
+                            <p>
+                              Last {h.usage?.days ?? 30} days:{" "}
+                              {m?.error ? <span className="text-[var(--coral)]">{m.error}</span> : <>{m?.sent ?? 0} sent, {m?.delivered ?? 0} delivered</>}
+                              {c?.error ? null : <> · est. cost {c?.total ?? 0}{a?.currency ? ` ${a.currency}` : ""}</>}
+                            </p>
+                            <p className="text-xs">Checked {ago(h.checked_at)}</p>
+                          </div>
+                        ) : <p className="mt-1.5 text-xs">Not checked yet — press Refresh status.</p>}
+                        <p className="mt-1.5">
+                          Templates {tplStep?.detail ? `(${tplStep.detail} approved)` : ""}:{" "}
+                          {s.provisioning?.templates && Object.keys(s.provisioning.templates).length ? (
+                            Object.entries(s.provisioning.templates).map(([name, status]) => (
+                              <span key={name} title={`${name}: ${status}`}
+                                className={`mr-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  status === "APPROVED" ? "bg-[var(--teal-light)] text-[var(--teal-dark)]"
+                                  : status === "PENDING" || status === "IN_APPEAL" ? "bg-amber-50 text-[var(--amber)]"
+                                  : "bg-red-50 text-[var(--coral)]"}`}>
+                                {name.replace(/^parro_/, "")}: {status.startsWith("ERROR") ? "ERROR" : status}
+                              </span>
+                            ))
+                          ) : "none submitted yet"}
+                        </p>
+                        {h?.templates_error && <p className="text-xs text-[var(--coral)]">Templates: {h.templates_error}</p>}
+                      </div>
                     </div>
                   );
                 })()}
-                {s.status === "approved" && (
-                  <p className="mt-1 text-sm text-[var(--slate)]">
-                    Templates:{" "}
-                    {s.provisioning?.templates && Object.keys(s.provisioning.templates).length ? (
-                      Object.entries(s.provisioning.templates).map(([name, status]) => (
-                        <span key={name} title={`${name}: ${status}`}
-                          className={`mr-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                            status === "APPROVED" ? "bg-[var(--teal-light)] text-[var(--teal-dark)]"
-                            : status === "PENDING" || status === "IN_APPEAL" ? "bg-amber-50 text-[var(--amber)]"
-                            : "bg-red-50 text-[var(--coral)]"}`}>
-                          {name.replace(/^parro_/, "")}: {status.startsWith("ERROR") ? "ERROR" : status}
-                        </span>
-                      ))
-                    ) : "not checked yet"}
-                    {s.provisioning?.error && <span className="block text-xs text-[var(--coral)]">Setup error: {s.provisioning.error}</span>}
-                  </p>
-                )}
                 <p className="mt-1 text-xs text-[var(--slate)]">{new Date(s.created_at).toLocaleString()}</p>
               </div>
               {s.status === "approved" && (
