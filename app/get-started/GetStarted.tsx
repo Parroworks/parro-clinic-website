@@ -21,9 +21,11 @@ type FbLoginResponse = { authResponse?: { code?: string } | null; status?: strin
 type SessionInfo = { waba_id?: string; phone_number_id?: string };
 type Step = "details" | "connect" | "done";
 
-const APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
-const CONFIG_ID = process.env.NEXT_PUBLIC_META_CONFIG_ID ?? "";
-const SOLUTION_ID = process.env.NEXT_PUBLIC_META_SOLUTION_ID ?? "";
+// Public identifiers (they are visible in the browser anyway). Built-in defaults mean a missing Vercel variable can
+// no longer silently drop the Multi-Partner Solution; a variable, when set, still overrides them.
+const APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || "1778635740054537";
+const CONFIG_ID = process.env.NEXT_PUBLIC_META_CONFIG_ID || "3586006038225759";
+const SOLUTION_ID = process.env.NEXT_PUBLIC_META_SOLUTION_ID || "1454896099956578";
 const GRAPH_VERSION = process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v20.0";
 const STORAGE_KEY = "parro_signup_id";
 
