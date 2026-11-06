@@ -191,6 +191,19 @@ export default function SignupsAdmin() {
     }
   };
 
+  const retrySetup = async (s: Signup) => {
+    setBusyId(s.id);
+    setError(null);
+    try {
+      await call(`/api/v1/admin/signups/${s.id}/provision`, { method: "POST", body: "{}" });
+      await load();                       // the list carries the saved result: steps, templates and any setup error
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not retry the setup");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const refreshStatus = async (s: Signup) => {
     setBusyId(s.id);
     setError(null);
@@ -404,6 +417,10 @@ export default function SignupsAdmin() {
                 <div className="flex flex-wrap gap-2">
                   <button disabled={busyId === s.id} onClick={() => refreshStatus(s)}
                     className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Refresh status</button>
+                  {!s.messaging_ready && (
+                    <button disabled={busyId === s.id} onClick={() => retrySetup(s)}
+                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Retry setup</button>
+                  )}
                   {vertical === "clinic" && (
                     <button disabled={busyId === s.id} onClick={() => resetLogin(s)}
                       className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-50">Reset login PIN</button>
