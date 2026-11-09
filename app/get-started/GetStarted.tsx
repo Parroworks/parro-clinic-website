@@ -196,6 +196,10 @@ export default function GetStarted({ vertical = "clinic" }: { vertical?: Vertica
       try {
         const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         if (data?.type !== "WA_EMBEDDED_SIGNUP") return;
+        // Add ?debug=1 to the page URL to see what Meta reports in the browser console (no tokens or codes are logged)
+        if (new URLSearchParams(window.location.search).has("debug")) {
+          console.info("[embedded-signup]", data.event, JSON.stringify(data.data ?? {}));
+        }
         if (data.event === "CANCEL") {
           cancelled.current = true;
         } else if (data.event === "FINISH" || data.event === "FINISH_ONLY_WABA") {
@@ -273,6 +277,9 @@ export default function GetStarted({ vertical = "clinic" }: { vertical?: Vertica
     window.FB.login(
       (response) => {
         const code = response.authResponse?.code;
+        if (new URLSearchParams(window.location.search).has("debug")) {
+          console.info("[embedded-signup] FB.login status:", response.status, "got code:", !!code);
+        }
         if (!code) {
           setBusy(false);
           setError(
